@@ -1,0 +1,18 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+app/build/
+
+# Android
+app/android/.gradle/
+app/android/local.properties
+
+# PlatformIO
+esp32/.pio/
+esp32/.vscode/
+
+# Local APK downloads
+release-apk/
