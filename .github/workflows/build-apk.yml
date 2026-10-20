@@ -1,0 +1,58 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Check Flutter Version
+        run: flutter --version
+
+      - name: Install App Dependencies
+        working-directory: ./app
+        run: flutter pub get
+
+      - name: Run Flutter Analyze
+        working-directory: ./app
+        run: flutter analyze || true
+
+      - name: Build Android APK
+        working-directory: ./app
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK Artifact
+        run: |
+          mkdir -p build-output
+          cp app/build/app/outputs/flutter-apk/app-release.apk build-output/ESPMusic-release.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ESPMusic-release-apk
+          path: build-output/ESPMusic-release.apk
+          retention-days: 14
