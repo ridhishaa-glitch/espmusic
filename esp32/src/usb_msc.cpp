@@ -1,46 +1,54 @@
-#include "../include/usb_msc.h"
-#include "../include/virtual_fat.h"
-#include "../include/config.h"
-#include "Adafruit_TinyUSB.h"
+#include "usb_msc.h"
+#include "virtual_fat.h"
+#include "config.h"
+#include "USB.h"
+#include "USBMSC.h"
 
-// TinyUSB MSC Object
-static Adafruit_USBD_MSC usb_msc;
+#if ARDUINO_USB_MODE
+#warning This sketch should be used when USB is in OTG mode (ARDUINO_USB_MODE=0)
+void initUsbMsc() {}
+void usbMscSoftReconnect() {}
+#else
 
-// Vendor & Product Strings for Speaker Display
-static const char* MSC_VENDOR_ID  = "ESPMUSIC";
-static const char* MSC_PRODUCT_ID = "Smart Audio Mod";
-static const char* MSC_PRODUCT_REV = "1.0 ";
+static USBMSC msc;
 
-static int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize) {
+static int32_t handle_msc_read(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
     return virtualFAT.readSector(lba, (uint8_t*)buffer, bufsize);
 }
 
-static int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize) {
+static int32_t handle_msc_write(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
     // Read-only virtual media
     return -1;
 }
 
-static void msc_flush_cb(void) {
-    // No-op for read-only
+static bool handle_msc_start_stop(uint8_t power_condition, bool start, bool load_eject) {
+    return true;
 }
 
 void initUsbMsc() {
-    Serial.println("[USB] Initializing TinyUSB Mass Storage Class...");
+    Serial.println("[USB] Initializing Native USB Mass Storage Class...");
 
-    usb_msc.setID(MSC_VENDOR_ID, MSC_PRODUCT_ID, MSC_PRODUCT_REV);
-    usb_msc.setCapacity(1024 * 1024, DISK_BLOCK_SIZE); // 512 MB virtual disk
-    usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
-    usb_msc.setUnitReady(true);
+    msc.vendorID("ESPMUSIC");
+    msc.productID("Smart Audio Mod");
+    msc.productRevision("1.0");
+    msc.onRead(handle_msc_read);
+    msc.onWrite(handle_msc_write);
+    msc.onStartStop(handle_msc_start_stop);
+    msc.mediaPresent(true);
 
-    usb_msc.begin();
-    Serial.println("[USB] TinyUSB Mass Storage Ready.");
+    // 512 MB virtual drive (1,048,576 sectors of 512 bytes)
+    msc.begin(1024 * 1024, DISK_BLOCK_SIZE);
+    USB.begin();
+
+    Serial.println("[USB] Native USB MSC Initialized.");
 }
 
 void usbMscSoftReconnect() {
-    // Trigger soft USB re-enumeration by resetting unit ready or re-mounting
-    Serial.println("[USB] Soft USB reconnect triggered for new track...");
-    usb_msc.setUnitReady(false);
+    Serial.println("[USB] Soft media reset for new track...");
+    msc.mediaPresent(false);
     delay(100);
     virtualFAT.resetPlaybackPosition();
-    usb_msc.setUnitReady(true);
+    msc.mediaPresent(true);
 }
+
+#endif

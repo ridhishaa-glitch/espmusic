@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 
-// Wi-Fi Credentials (fallback if not configured via AP/SmartConfig)
-#define DEFAULT_WIFI_SSID       "YourWiFiSSID"
-#define DEFAULT_WIFI_PASS       "YourWiFiPassword"
+// Wi-Fi Credentials
+#define DEFAULT_WIFI_SSID       "Gupta_Wifi"
+#define DEFAULT_WIFI_PASS       "Piyushgupta"
 
 // mDNS hostname (resolves as http://espmusic.local)
 #define MDNS_HOSTNAME           "espmusic"

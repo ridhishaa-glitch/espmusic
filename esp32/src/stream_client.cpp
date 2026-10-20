@@ -1,7 +1,7 @@
-#include "../include/stream_client.h"
-#include "../include/config.h"
-#include "../include/virtual_fat.h"
-#include "../include/usb_msc.h"
+#include "stream_client.h"
+#include "config.h"
+#include "virtual_fat.h"
+#include "usb_msc.h"
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 

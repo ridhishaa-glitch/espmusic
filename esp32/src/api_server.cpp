@@ -1,6 +1,6 @@
-#include "../include/api_server.h"
-#include "../include/stream_client.h"
-#include "../include/config.h"
+#include "api_server.h"
+#include "stream_client.h"
+#include "config.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -194,12 +194,14 @@ void initApiServer() {
             JsonDocument doc;
             deserializeJson(doc, data, len);
 
-            String action = doc["action"] | "set";
-            if (action == "set") {
-                int minutes = doc["minutes"] | 30;
-                streamClient.setSleepTimer(minutes);
-            } else if (action == "cancel") {
+            String action = doc["action"].as<String>();
+            if (action == "cancel") {
                 streamClient.cancelSleepTimer();
+            } else {
+                int minutes = doc["minutes"].is<int>() 
+                    ? doc["minutes"].as<int>() 
+                    : (doc["minutes"].is<const char*>() ? atoi(doc["minutes"].as<const char*>()) : 30);
+                streamClient.setSleepTimer(minutes);
             }
 
             AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "{\"status\":\"ok\"}");

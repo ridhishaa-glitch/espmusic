@@ -1,4 +1,4 @@
-#include "../include/ring_buffer.h"
+#include "ring_buffer.h"
 
 AudioRingBuffer::AudioRingBuffer()
     : buffer(nullptr), capacity(0), head(0), tail(0), count(0) {

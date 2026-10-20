@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include "include/config.h"
-#include "include/usb_msc.h"
-#include "include/stream_client.h"
-#include "include/api_server.h"
+#include "config.h"
+#include "usb_msc.h"
+#include "stream_client.h"
+#include "api_server.h"
 
 // Wi-Fi Connection Helper
 void connectWiFi() {
@@ -24,7 +24,7 @@ void connectWiFi() {
         Serial.printf("[WiFi] IP Address: %s\n", WiFi.localIP().toString().c_str());
         Serial.printf("[WiFi] Signal (RSSI): %d dBm\n", WiFi.RSSI());
     } else {
-        Serial.println("\n[WiFi] Failed to connect! Please update DEFAULT_WIFI_SSID and DEFAULT_WIFI_PASS in config.h");
+        Serial.println("\n[WiFi] Failed to connect! Please check Wi-Fi credentials in config.h");
     }
 }
 
@@ -70,6 +70,5 @@ void setup() {
 }
 
 void loop() {
-    // Background FreeRTOS tasks handle streaming, sleep timer, and HTTP requests
     delay(100);
 }

@@ -1,5 +1,5 @@
-#include "../include/virtual_fat.h"
-#include "../include/config.h"
+#include "virtual_fat.h"
+#include "config.h"
 
 // FAT16 Geometry Parameters
 #define SECTOR_SIZE             512
