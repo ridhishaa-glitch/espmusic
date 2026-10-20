@@ -57,9 +57,12 @@ class PlayerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  int _failedPollCount = 0;
+
   Future<void> pollEspStatus() async {
     final status = await espService.getStatus();
     if (status != null) {
+      _failedPollCount = 0;
       _isEspConnected = true;
       _espStatus = status;
 
@@ -75,9 +78,17 @@ class PlayerProvider extends ChangeNotifier {
       }
       notifyListeners();
     } else {
+      _failedPollCount++;
       if (_isEspConnected) {
         _isEspConnected = false;
         notifyListeners();
+      }
+      // Periodically attempt auto-discovery when disconnected (every ~6-8s)
+      if (_failedPollCount % 4 == 0) {
+        final found = await espService.autoDiscoverEsp();
+        if (found != null) {
+          await checkEspConnection();
+        }
       }
     }
   }

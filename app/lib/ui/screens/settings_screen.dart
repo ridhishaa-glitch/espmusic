@@ -12,6 +12,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _hostController;
   bool _isTesting = false;
+  bool _isAutoScanning = false;
   String? _testResult;
   bool _testSuccess = false;
 
@@ -44,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (status != null) {
           _testSuccess = true;
           _testResult = 'Connected successfully!\n'
+              'Host: ${_hostController.text}\n'
               'Status: ${status.status}\n'
               'Wi-Fi RSSI: ${status.wifiRssi} dBm\n'
               'Buffer: ${status.bufferPercent}%\n'
@@ -51,8 +53,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Sleep Timer: ${status.sleepTimerSeconds}s';
         } else {
           _testSuccess = false;
-          _testResult = 'Connection failed.\n'
-              'Ensure ESP is powered on, connected to the same Wi-Fi, and reachable at ${_hostController.text}';
+          _testResult = 'Connection failed to ${_hostController.text}.\n'
+              'Note: Android blocks .local mDNS on most phones.\n'
+              'Tap "Auto-Detect ESP32" below or enter your ESP IP (e.g. http://192.168.0.59)';
+        }
+      });
+      await player.checkEspConnection();
+    }
+  }
+
+  Future<void> _runAutoDiscovery() async {
+    setState(() {
+      _isAutoScanning = true;
+      _testResult = 'Scanning local network for ESP32...';
+      _testSuccess = false;
+    });
+
+    final player = context.read<PlayerProvider>();
+    final foundHost = await player.espService.autoDiscoverEsp();
+
+    if (mounted) {
+      setState(() {
+        _isAutoScanning = false;
+        if (foundHost != null) {
+          _hostController.text = foundHost;
+          _testSuccess = true;
+          _testResult = 'ESP32 Discovered Successfully!\nEndpoint: $foundHost';
+        } else {
+          _testSuccess = false;
+          _testResult = 'Auto-discovery timed out.\n'
+              'You can directly tap "Use http://192.168.0.59" below.';
         }
       });
       await player.checkEspConnection();
@@ -83,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Default mDNS hostname is http://espmusic.local. If your network does not resolve mDNS, enter the ESP32 IP address (e.g., http://192.168.1.150).',
+            'Android often does not resolve .local mDNS domains. You can use Auto-Detect or enter your ESP32 IP directly (e.g. http://192.168.0.59).',
             style: TextStyle(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: 12),
@@ -93,7 +123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFF313244),
-              hintText: 'http://espmusic.local',
+              hintText: 'http://192.168.0.59 or http://espmusic.local',
               hintStyle: const TextStyle(color: Colors.white38),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -103,18 +133,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 12),
+
+          // Quick Preset Buttons
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ActionChip(
+                avatar: const Icon(Icons.flash_on, size: 16, color: Color(0xFFA6E3A1)),
+                label: const Text('Use http://192.168.0.59', style: TextStyle(fontSize: 12)),
+                backgroundColor: const Color(0xFF1E3A2F),
+                labelStyle: const TextStyle(color: Color(0xFFA6E3A1)),
+                onPressed: () {
+                  _hostController.text = 'http://192.168.0.59';
+                  _testConnection();
+                },
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.wifi, size: 16, color: Colors.white70),
+                label: const Text('Use http://espmusic.local', style: TextStyle(fontSize: 12)),
+                backgroundColor: const Color(0xFF313244),
+                labelStyle: const TextStyle(color: Colors.white70),
+                onPressed: () {
+                  _hostController.text = 'http://espmusic.local';
+                  _testConnection();
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _isTesting ? null : _testConnection,
+                  onPressed: (_isTesting || _isAutoScanning) ? null : _testConnection,
                   icon: _isTesting
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                         )
-                      : const Icon(Icons.wifi_find_rounded),
+                      : const Icon(Icons.check_circle_outline),
                   label: Text(_isTesting ? 'Testing...' : 'Test Connection'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF89B4FA),
@@ -124,18 +185,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: () {
-                  _hostController.text = 'http://espmusic.local';
-                  _testConnection();
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF45475A)),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                onPressed: (_isTesting || _isAutoScanning) ? null : _runAutoDiscovery,
+                icon: _isAutoScanning
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.radar_rounded, color: Colors.white),
+                label: const Text('Auto-Detect', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF45475A),
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Reset', style: TextStyle(color: Colors.white70)),
               ),
             ],
           ),
@@ -178,7 +243,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           ...['160kbps', '320kbps', '96kbps'].map((quality) {
-            final isSelected = player.espService.preferredQuality == quality;
             return RadioListTile<String>(
               value: quality,
               groupValue: player.espService.preferredQuality,
@@ -199,22 +263,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             );
           }).toList(),
-
-          const SizedBox(height: 32),
-          const Divider(color: Color(0xFF313244)),
-          const SizedBox(height: 16),
-
-          const Text(
-            'Hardware & Mod Notes',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '• Connect the ESP32-S3 USB-C OTG port to the speaker\'s USB-A port using a USB-C to USB-A cable.\n'
-            '• The speaker will detect a USB flash drive (pendrive) and begin reading the audio stream automatically.\n'
-            '• Playback is autonomous: once commanded, the ESP streams audio independently over Wi-Fi without needing your phone.',
-            style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.5),
-          ),
         ],
       ),
     );
